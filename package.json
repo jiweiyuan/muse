@@ -1,0 +1,27 @@
+{
+  "name": "muse-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Muse - AI-powered creative workspace",
+  "scripts": {
+    "dev": "pnpm --parallel --filter=./frontend --filter=./backend dev",
+    "dev:frontend": "pnpm --filter=./frontend dev",
+    "dev:backend": "pnpm --filter=./backend dev",
+    "dev:schemas": "pnpm --filter=./shared-schemas dev",
+    "build": "pnpm --filter=./shared-schemas build && pnpm --parallel --filter=./frontend --filter=./backend build",
+    "build:frontend": "pnpm --filter=./shared-schemas build && pnpm --filter=./frontend build",
+    "build:backend": "pnpm --filter=./shared-schemas build && pnpm --filter=./backend build",
+    "build:schemas": "pnpm --filter=./shared-schemas build"
+  },
+  "keywords": [
+    "ai",
+    "workspace",
+    "canvas",
+    "video-editor"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,158 @@
+/* Canvas Custom UI Styles - tldraw overrides and complex effects only */
+
+/* Override tldraw z-index layers to be below chat panel (z-50) */
+.canvas-custom-ui {
+  --layer-watermark: 45;
+}
+
+/* Reposition tldraw watermark */
+.tl-watermark_SEE-LICENSE {
+  bottom: -100px !important;
+}
+
+/* Override tldraw font family */
+.tl-theme__light,
+.tl-theme__dark {
+  --tl-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Hide the crop handle icon on image shapes */
+.tl-image__crop {
+  display: none !important;
+}
+
+/* Hide the hyperlink button on image shapes */
+.tl-hyperlink-button {
+  display: none !important;
+}
+
+/* Fix text selection issue with select tool
+ * Prevent text from being selectable when not in edit mode
+ * This allows the select tool to work properly on text shapes
+ *
+ * Important: We only disable user-select, NOT pointer-events
+ * Disabling pointer-events causes delayed/sticky dragging because
+ * tldraw can't detect pointer events directly on the text content
+ */
+.tl-text-wrapper:not([data-isediting='true']) .tl-text-content,
+.tl-text-wrapper:not([data-isediting='true']) .tl-text-content *,
+.tl-text:not([contenteditable='true']),
+.tl-text-content:not([contenteditable='true']) {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+/* Allow text selection and interaction only when actively editing */
+.tl-text-wrapper[data-isediting='true'] .tl-text,
+.tl-text-wrapper[data-isediting='true'] .tl-text-content,
+.tl-text-wrapper[data-isediting='true'] .tl-text-content *,
+*[contenteditable='true'],
+*[contenteditable='true'] * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Processing overlay - Frosted glass with animated radial gradients
+ * Technique: Multiple radial gradients + backdrop-filter blur
+ * Inspired by: https://github.com/chokcoco/iCSS/issues/157
+ * z-index: 5 to render below chat (z-index: 20)
+ */
+.processing-overlay {
+  position: fixed;
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  animation: overlayFadeIn 0.5s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Animated gradient layer with multiple radial gradients */
+.processing-gradient-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-image:
+    radial-gradient(at 69% 24%, #6A719F 0px, transparent 50%),
+    radial-gradient(at 8% 17%, #734C72 0px, transparent 50%),
+    radial-gradient(at 36% 13%, #84A76E 0px, transparent 50%),
+    radial-gradient(at 52% 45%, #8C7ACA 0px, transparent 50%),
+    radial-gradient(at 92% 66%, #B14B44 0px, transparent 50%),
+    radial-gradient(at 18% 54%, #B3867B 0px, transparent 50%),
+    radial-gradient(at 68% 61%, #B8A947 0px, transparent 50%),
+    radial-gradient(at 64% 36%, #CD7221 0px, transparent 50%),
+    radial-gradient(at 15% 88%, #6A719F 0px, transparent 50%),
+    radial-gradient(at 3% 97%, #734C72 0px, transparent 50%),
+    radial-gradient(at 8% 53%, #84A76E 0px, transparent 50%),
+    radial-gradient(at 42% 29%, #8C7ACA 0px, transparent 50%);
+  background-size: 400% 400%;
+  animation: gradientMove 12s ease-in-out infinite;
+}
+
+/* Smooth flowing movement */
+@keyframes gradientMove {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Frosted glass blur - THE KEY
+ * 100px blur creates the artistic frosted glass effect
+ * Maximum grain texture for ultra-realistic frosted glass (颗粒感+++)
+ */
+.processing-glass-blur {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  backdrop-filter: blur(100px) contrast(1.2) brightness(1.1) saturate(1.1);
+  -webkit-backdrop-filter: blur(100px) contrast(1.2) brightness(1.1) saturate(1.1);
+  /* Triple-layer noise for maximum grain effect */
+  background-image:
+    /* Ultra-fine grain particles */
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 500 500' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise1'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.8' numOctaves='6' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise1)' opacity='0.6'/%3E%3C/svg%3E"),
+    /* Medium grain texture */
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise2'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.0' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise2)' opacity='0.45'/%3E%3C/svg%3E"),
+    /* Coarse grain structure */
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise3'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise3)' opacity='0.35'/%3E%3C/svg%3E"),
+    /* Subtle white overlay for glass shine */
+    linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  background-size: 120px 120px, 180px 180px, 280px 280px, 100% 100%;
+  animation: grainShift 6s linear infinite;
+}
+
+/* Animate grain for living texture feel */
+@keyframes grainShift {
+  0%, 100% {
+    background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+  }
+  33% {
+    background-position: 50% 50%, -30% 30%, 20% -20%, 0% 0%;
+  }
+  66% {
+    background-position: -50% -50%, 40% -40%, -30% 40%, 0% 0%;
+  }
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+  /* Lighter blur and slower animation on mobile for better performance */
+  .processing-glass-blur {
+    backdrop-filter: blur(60px);
+    -webkit-backdrop-filter: blur(60px);
+  }
+
+  .processing-gradient-layer {
+    animation-duration: 20s;
+  }
+}

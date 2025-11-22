@@ -1,0 +1,41 @@
+{
+  "name": "@muse/shared-schemas",
+  "version": "0.1.0",
+  "description": "Shared TypeScript schemas and validators for Muse frontend and backend",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsc --watch",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "schema",
+    "validation",
+    "typescript",
+    "zod"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@tldraw/tlschema": "^3.15.5",
+    "@tldraw/validate": "^3.15.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

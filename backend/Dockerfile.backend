@@ -1,0 +1,40 @@
+FROM node:20-alpine
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /workdir
+
+# Copy monorepo workspace files
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml /workdir/
+
+# Copy all package.json files for workspace dependencies
+COPY backend/package.json /workdir/backend/
+COPY shared-schemas/package.json /workdir/shared-schemas/
+
+# Install dependencies (including dev dependencies for build)
+RUN pnpm install --frozen-lockfile
+
+# Copy shared-schemas source (workspace dependency)
+COPY shared-schemas /workdir/shared-schemas/
+
+# Build shared-schemas first
+RUN cd /workdir/shared-schemas && pnpm run build
+
+# Copy source code and build configuration
+COPY ./backend/src /workdir/backend/src
+COPY ./backend/tsconfig.json /workdir/backend/tsconfig.json
+COPY ./backend/tsup.config.ts /workdir/backend/tsup.config.ts
+
+# Build the TypeScript code
+RUN cd /workdir/backend && pnpm run build
+
+# Clean up source files (keep node_modules for now - pnpm prune has issues with workspaces)
+RUN rm -rf /workdir/backend/tests /workdir/backend/src
+
+# Set environment
+ENV NODE_ENV=production
+
+WORKDIR /workdir/backend
+
+CMD ["pnpm", "run", "start"]

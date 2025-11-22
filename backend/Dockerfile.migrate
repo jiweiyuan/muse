@@ -1,0 +1,6 @@
+FROM migrate/migrate:v4.18.1
+
+# This image is used for running database migrations with golang-migrate
+# Usage: docker compose run --rm migrate [up|down|create|version|etc.]
+
+WORKDIR /migrations
