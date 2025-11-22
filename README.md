@@ -19,224 +19,309 @@ Full-stack TypeScript application built for London AI Hackathon 2025.
 - Better Auth for simple OAuth implementation
 - Monorepo with shared TypeScript schemas
 
-## Tech Stack
+## Stack Details
 
 ### Frontend
-- **Framework**: Next.js 15 with Turbopack
-- **UI**: React 19, TypeScript, Tailwind CSS
-- **Components**: Radix UI, Framer Motion, Lucide Icons
-- **Canvas**: tldraw for interactive visual workspace
-- **Rich Text**: TipTap editor with markdown support
-- **AI Integration**: Vercel AI SDK for streaming responses
-- **State Management**: Zustand, TanStack Query
-- **Syntax Highlighting**: Shiki
-- **Video**: Remotion for programmatic video generation
+```
+next@15.5.4              # App Router, Turbopack, Server Components
+react@19.2.0             # Concurrent features, Server Components
+tldraw@3.15.5            # Canvas SDK with real-time sync
+@ai-sdk/react@2.0.68     # useChat hook, streaming responses
+@tiptap/core@3.8.0       # Rich text editor for chat input
+zustand@5.0.8            # Client state (chat drafts, pending messages)
+@tanstack/react-query    # Server state caching
+framer-motion@12.23.24   # Animations
+tailwindcss@4.1.14       # Styling
+```
 
 ### Backend
-- **Server**: Fastify with TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Cache**: Redis (ioredis)
-- **Authentication**: Better Auth with Google OAuth
-- **Storage**: AWS S3 / Cloudflare R2
-- **Real-time**: WebSocket with tldraw sync
-- **API Documentation**: Fastify Swagger
+```
+fastify@5.6.1            # HTTP server
+drizzle-orm@0.44.6       # ORM with TypeScript inference
+pg@8.16.3                # PostgreSQL client
+ioredis@5.8.2            # Redis for sessions/cache
+better-auth@1.3.27       # Authentication
+ai@5.0.63                # Vercel AI SDK core
+@fal-ai/client@1.7.2     # MiniMax v2 music generation
+@tldraw/sync-core        # Canvas real-time sync
+ws@8.18.0                # WebSocket server
+```
 
-### AI & Media Generation
-- **LLM Providers**:
-  - OpenAI (GPT models)
-  - Anthropic (Claude)
-  - Google (Gemini)
-  - Mistral
-  - OpenRouter (multi-provider access)
-- **Music Generation**: MiniMax v2 via fal.ai
-- **Image Generation**: fal.ai, Replicate
-- **Search**: Valyu AI for RAG capabilities
-
-## Key Features
-
-### 🎵 AI Music Generation
-- **Text-to-Music**: Transform lyrics and descriptions into complete songs
-- **MiniMax v2 Integration**: High-quality music generation via fal.ai
-- **Genre & Mood Control**: Customize musical style and emotional tone
-- **Configurable Audio**: Adjust sample rate, bitrate, and format (MP3, FLAC, PCM)
-
-### 🎨 Creative Workflow
-- **Interactive Canvas**: Visual workspace powered by tldraw
-- **Multi-Modal Generation**: Create audio, images, and videos
-- **Album Cover Generation**: AI-generated artwork for your music
-- **Lyrics Generation**: AI-powered lyric writing assistance
-- **Content Fetching**: Import inspiration from web sources
-
-### 💬 Conversational AI Interface
-- **Multi-Model Support**: Switch between different AI models
-- **Streaming Responses**: Real-time AI message generation
-- **Tool Invocations**: AI can trigger music/image generation
-- **File Uploads**: Attach images, audio, and documents
-- **Project-Based Organization**: Manage multiple creative projects
-- **Chat History**: Persistent conversation storage
-
-### 🎯 Advanced Capabilities
-- **Real-time Collaboration**: Shared canvas with WebSocket sync
-- **Search Integration**: Valyu AI for enhanced context retrieval
-- **Asset Management**: Organize generated media in project drawers
-- **Responsive Design**: Works across desktop and mobile devices
+### AI Providers
+```
+@ai-sdk/openai           # GPT-4, GPT-4o
+@ai-sdk/anthropic        # Claude 3.5 Sonnet
+@ai-sdk/google           # Gemini Pro
+@ai-sdk/mistral          # Mistral Large
+@openrouter/ai-sdk-provider  # Multi-provider fallback
+replicate                # Image/video models
+```
 
 ## Project Structure
 
 ```
-muse/
-├── frontend/               # Next.js application
+.
+├── backend/
+│   ├── src/
+│   │   ├── config/
+│   │   │   ├── env.ts              # Env validation (Zod)
+│   │   │   └── constants.ts
+│   │   ├── routes/
+│   │   │   └── v1/
+│   │   │       ├── project-chats.ts    # Chat CRUD
+│   │   │       ├── project.ts          # Project management
+│   │   │       └── index.ts            # Route registration
+│   │   ├── services/
+│   │   │   ├── messages.ts         # Message handling + AI streaming
+│   │   │   ├── title-generator.ts  # Auto-generate chat titles
+│   │   │   └── music-generation/
+│   │   │       ├── minimax.ts      # MiniMax v2 integration
+│   │   │       ├── lyrics.ts       # Lyric generation
+│   │   │       ├── cover.ts        # Album art (fal.ai)
+│   │   │       └── content-fetcher.ts
+│   │   └── server.ts               # Fastify setup + plugins
+│   └── migrations/                 # SQL migrations
+├── frontend/
 │   ├── app/
 │   │   ├── components/
-│   │   │   ├── canvas/    # tldraw canvas components
-│   │   │   ├── chat/      # Conversation UI
+│   │   │   ├── canvas/
+│   │   │   │   ├── shapes/         # Custom tldraw shapes
+│   │   │   │   │   └── audio-shape/    # Audio player shape
+│   │   │   │   ├── audio-generator.tsx
+│   │   │   │   ├── image-generator.tsx
+│   │   │   │   └── canvas-container.tsx
+│   │   │   ├── chat/
+│   │   │   │   ├── conversation-chat.tsx   # Chat UI
+│   │   │   │   ├── use-model.ts           # Model selection hook
+│   │   │   │   └── tool-invocation.tsx    # Render AI tool calls
 │   │   │   └── chat-input/
-│   │   ├── hooks/         # React hooks
-│   │   └── layout.tsx
+│   │   ├── hooks/
+│   │   │   ├── use-chat-submit.ts
+│   │   │   └── use-message-handlers.ts
+│   │   └── (routes)/
 │   └── lib/
-│       ├── chat-store/    # Chat state management
-│       ├── canvas-store/  # Canvas state
-│       └── project-store/ # Project organization
-├── backend/               # Fastify server
-│   ├── src/
-│   │   ├── config/       # Environment & constants
-│   │   ├── routes/       # API endpoints
-│   │   ├── services/
-│   │   │   └── music-generation/
-│   │   │       ├── minimax.ts    # MiniMax integration
-│   │   │       ├── lyrics.ts     # Lyric generation
-│   │   │       ├── cover.ts      # Album art
-│   │   │       └── content-fetcher.ts
-│   │   └── server.ts
-│   └── migrations/       # Database migrations
-└── shared-schemas/       # Shared TypeScript types
+│       ├── chat-store/         # Zustand stores
+│       ├── canvas-store/
+│       └── project-store/
+└── shared-schemas/             # Shared TS types
 ```
 
-## Music Generation Pipeline
+## Music Generation Flow
 
-1. **User Input**: Describe song concept via chat interface
-2. **AI Processing**: LLM interprets request and generates lyrics
-3. **Music Synthesis**: MiniMax v2 creates audio from lyrics + genre/mood
-4. **Cover Art**: fal.ai generates matching album artwork
-5. **Canvas Integration**: All assets appear in interactive workspace
+```typescript
+// 1. User sends message via chat
+POST /api/v1/chat
+{
+  messages: [...],
+  model: "gpt-4o",
+  tools: [generateMusicTool, generateLyricsTool]
+}
 
-## Setup & Installation
+// 2. LLM decides to call music generation tool
+// Backend parses tool call -> invokes MiniMax v2
+
+// src/services/music-generation/minimax.ts
+const result = await fal.subscribe("fal-ai/minimax-music/v2", {
+  input: {
+    prompt: `${genre}, ${mood}`,
+    lyrics: generatedLyrics,
+    sample_rate: 44100,
+    bitrate: 256000,
+    format: "mp3"
+  }
+})
+
+// 3. fal.ai returns audio URL
+// 4. Backend streams tool result to frontend
+// 5. Frontend creates audio shape on canvas
+```
+
+## Setup
 
 ### Prerequisites
 - Node.js 20+
-- PostgreSQL
-- Redis
-- pnpm
+- PostgreSQL 14+
+- Redis 6+
+- pnpm 9+
 
 ### Environment Variables
 
-**Backend** (`.env`):
 ```bash
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/muse
+# backend/.env
+DATABASE_URL=postgresql://localhost:5432/muse
 REDIS_URL=redis://localhost:6379
 
-# Authentication
-BETTER_AUTH_SECRET=your-secret-key-min-32-chars
+BETTER_AUTH_SECRET=<generate-with-openssl-rand-base64-32>
 BETTER_AUTH_URL=http://localhost:8000
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
 
-# AI Providers (use at least 3 for hackathon)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-GOOGLE_GENERATIVE_AI_API_KEY=...
-FAL_KEY=...                    # For music generation
-VALYU_API_KEY=...              # For search
+# OAuth (optional)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
 
-# Optional
-REPLICATE_API_TOKEN=...
-OPENROUTER_API_KEY=...
+# AI providers (need ≥3 for hackathon)
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GOOGLE_GENERATIVE_AI_API_KEY=
+FAL_KEY=                    # Required for music generation
+VALYU_API_KEY=              # Required for search
 
-# Storage (optional)
-R2_ACCOUNT_ID=...
-R2_ACCESS_KEY_ID=...
-R2_SECRET_ACCESS_KEY=...
-R2_BUCKET_NAME=...
+# Storage (optional, falls back to local)
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
 
-# Server
+ENCRYPTION_KEY=<random-string>
 PORT=8000
 FRONTEND_ORIGIN=http://localhost:3000
-ENCRYPTION_KEY=your-encryption-key
 ```
 
-**Frontend** (`.env.local`):
 ```bash
+# frontend/.env.local
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_WS_URL=ws://localhost:8000
 ```
 
-### Installation
+### Install & Run
 
-1. **Clone the repository**:
 ```bash
-git clone https://github.com/yourusername/muse.git
-cd muse
-```
-
-2. **Install dependencies**:
-```bash
+# Install dependencies
 pnpm install
-```
 
-3. **Set up database**:
-```bash
+# Setup database
 cd backend
 pnpm migrate:up
-```
 
-4. **Start development servers**:
-
-Terminal 1 (Backend):
-```bash
+# Terminal 1: Backend (http://localhost:8000)
 cd backend
 pnpm dev
-```
 
-Terminal 2 (Frontend):
-```bash
+# Terminal 2: Frontend (http://localhost:3000)
 cd frontend
 pnpm dev
 ```
 
-5. **Open application**:
-Navigate to `http://localhost:3000`
+## Key Implementation Details
 
-## Hackathon Integration
+### AI Streaming with Vercel AI SDK
 
-### Technologies Used (3+ Required)
-1. ✅ **OpenAI** - Primary LLM for chat interface
-2. ✅ **fal.ai** - MiniMax v2 music generation
-3. ✅ **Valyu AI** - Search and RAG capabilities
-4. ✅ **ElevenLabs** - Potential voice integration
-5. ✅ **Anthropic** - Claude models for enhanced reasoning
+```typescript
+// backend/src/services/messages.ts
+import { streamText } from 'ai'
 
-### Submission Details
-- **Track**: Open Innovation
-- **Video Demo**: [Link to Loom]
-- **Live Demo**: [Deployment URL]
+export async function handleChatMessage(messages, model) {
+  const result = streamText({
+    model: getModel(model),
+    messages,
+    tools: {
+      generateMusic: {
+        description: 'Generate music from lyrics',
+        parameters: z.object({
+          lyrics: z.string(),
+          genre: z.string(),
+          mood: z.string().optional()
+        }),
+        execute: async ({ lyrics, genre, mood }) => {
+          return await generateMusicWithMiniMax({ lyrics, genre, mood })
+        }
+      }
+    }
+  })
+
+  return result.toDataStreamResponse()
+}
+```
+
+### Canvas Sync with tldraw
+
+```typescript
+// frontend/app/components/canvas/canvas-container.tsx
+import { Tldraw, TLStore } from 'tldraw'
+import { useSync } from '@tldraw/sync'
+
+const store = useSync({
+  uri: `ws://localhost:8000/sync/${projectId}`,
+  // Real-time collaboration via WebSocket
+})
+
+<Tldraw store={store} />
+```
+
+### Custom Audio Shape
+
+```typescript
+// frontend/app/components/canvas/shapes/audio-shape/AudioShapeUtil.tsx
+export class AudioShapeUtil extends BaseBoxShapeUtil<AudioShape> {
+  static type = 'audio' as const
+
+  component(shape: AudioShape) {
+    return <AudioPlayer src={shape.props.url} />
+  }
+
+  indicator(shape: AudioShape) {
+    return <rect width={shape.props.w} height={shape.props.h} />
+  }
+}
+```
 
 ## API Endpoints
 
-### Music Generation
-- `POST /api/v1/music/generate` - Generate music from lyrics
-- `GET /api/v1/music/status/:id` - Check generation status
-- `GET /api/v1/music/result/:id` - Retrieve generated audio
+```
+POST   /api/v1/chat                 # Streaming chat completion
+GET    /api/v1/chats/:projectId     # List chats
+POST   /api/v1/chats                # Create chat
+DELETE /api/v1/chats/:id            # Delete chat
 
-### Chat
-- `POST /api/v1/chat` - Streaming chat completion
-- `GET /api/v1/chats/:projectId` - List project chats
-- `POST /api/v1/chats` - Create new chat
+GET    /api/v1/projects             # List projects
+POST   /api/v1/projects             # Create project
+DELETE /api/v1/projects/:id         # Delete project
 
-### Projects
-- `GET /api/v1/projects` - List user projects
-- `POST /api/v1/projects` - Create new project
-- `DELETE /api/v1/projects/:id` - Delete project
+POST   /api/v1/music/generate       # Generate music (internal)
+GET    /api/v1/music/status/:id     # Check status
+GET    /api/v1/music/result/:id     # Get result
+
+WS     /sync/:projectId             # tldraw sync WebSocket
+```
+
+## Database Schema
+
+```sql
+-- migrations/001_initial.sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT,
+  avatar_url TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE projects (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE chats (
+  id UUID PRIMARY KEY,
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  title TEXT,
+  model TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE messages (
+  id UUID PRIMARY KEY,
+  chat_id UUID REFERENCES chats(id) ON DELETE CASCADE,
+  role TEXT NOT NULL, -- 'user' | 'assistant' | 'system'
+  content JSONB NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_chats_project_id ON chats(project_id);
+CREATE INDEX idx_messages_chat_id ON messages(chat_id);
+```
 
 ## Development
 
