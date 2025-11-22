@@ -5,9 +5,7 @@ import type { UIMessage } from "@ai-sdk/react"
 import {
   CaretDown,
   CheckCircle,
-  Code,
   Link,
-  Nut,
   Spinner,
   Wrench,
 } from "@phosphor-icons/react"
@@ -25,6 +23,7 @@ interface ToolInvocationProps {
   toolInvocations: ToolPart[]
   className?: string
   defaultOpen?: boolean
+  isStreaming?: boolean
 }
 
 const TRANSITION = {
@@ -36,12 +35,22 @@ const TRANSITION = {
 export function ToolInvocation({
   toolInvocations,
   defaultOpen = false,
+  isStreaming = false,
 }: ToolInvocationProps) {
-  const [isExpanded, setIsExpanded] = useState(defaultOpen)
-
   const toolInvocationsData = Array.isArray(toolInvocations)
     ? toolInvocations
     : [toolInvocations]
+
+  // If streaming but no tools, show loading indicator without tool name
+  if (isStreaming && toolInvocationsData.length === 0) {
+    return (
+      <div className="mb-10 space-y-4">
+        <AnimatePresence>
+          <LoadingIndicator />
+        </AnimatePresence>
+      </div>
+    )
+  }
 
   // Group tool invocations by toolCallId
   const groupedTools = toolInvocationsData.reduce(
@@ -57,89 +66,56 @@ export function ToolInvocation({
   )
 
   const uniqueToolIds = Object.keys(groupedTools)
-  const isSingleTool = uniqueToolIds.length === 1
 
-  if (isSingleTool) {
-    return (
-      <SingleToolView
-        toolInvocations={toolInvocationsData}
-        defaultOpen={defaultOpen}
-        className="mb-10"
-      />
-    )
-  }
+  // Get tool info for each tool
+  const toolsInfo = uniqueToolIds.map((toolId) => {
+    const toolInvocationsForId = groupedTools[toolId]
+    const tool = toolInvocationsForId?.[0]
+    const toolName = tool?.type === "dynamic-tool"
+      ? tool.toolName
+      : tool?.type.replace(/^tool-/, "") || ""
+    const isLoading = tool?.state === "input-streaming" || tool?.state === "input-available"
 
+    return { toolId, toolInvocationsForId, toolName, isLoading }
+  })
+
+  // Always show individual tool cards with loading indicators between them
   return (
-    <div className="mb-10">
-      <div className="border-border flex flex-col gap-0 overflow-hidden rounded-md border">
-        <button
-          onClick={(e) => {
-            e.preventDefault()
-            setIsExpanded(!isExpanded)
-          }}
-          type="button"
-          className="hover:bg-accent flex w-full flex-row items-center rounded-t-md px-3 py-2 transition-colors"
-        >
-          <div className="flex flex-1 flex-row items-center gap-2 text-left text-base">
-            <Nut className="text-muted-foreground size-4" />
-            <span className="text-sm">Tools executed</span>
-            <div className="bg-secondary text-secondary-foreground rounded-full px-1.5 py-0.5 font-mono text-xs">
-              {uniqueToolIds.length}
-            </div>
-          </div>
-          <CaretDown
-            className={cn(
-              "h-4 w-4 transition-transform",
-              isExpanded ? "rotate-180 transform" : ""
+    <div className="mb-10 space-y-4">
+      {toolsInfo.map((toolInfo) => {
+        const { toolId, toolInvocationsForId, toolName, isLoading } = toolInfo
+
+        if (!toolInvocationsForId?.length) return null
+
+        return (
+          <div key={toolId}>
+            {isLoading && (
+              <AnimatePresence>
+                <LoadingIndicator toolName={toolName} />
+              </AnimatePresence>
             )}
-          />
-        </button>
-
-        <AnimatePresence initial={false}>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={TRANSITION}
-              className="overflow-hidden"
-            >
-              <div className="px-3 pt-3 pb-3">
-                <div className="space-y-2">
-                  {uniqueToolIds.map((toolId) => {
-                    const toolInvocationsForId = groupedTools[toolId]
-
-                    if (!toolInvocationsForId?.length) return null
-
-                    return (
-                      <div
-                        key={toolId}
-                        className="pb-2 last:border-0 last:pb-0"
-                      >
-                        <SingleToolView
-                          toolInvocations={toolInvocationsForId}
-                        />
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            <SingleToolView
+              toolInvocations={toolInvocationsForId}
+              allToolInvocations={toolInvocationsData}
+              defaultOpen={defaultOpen}
+            />
+          </div>
+        )
+      })}
     </div>
   )
 }
 
 type SingleToolViewProps = {
   toolInvocations: ToolPart[]
+  allToolInvocations?: ToolPart[]
   defaultOpen?: boolean
   className?: string
 }
 
 function SingleToolView({
   toolInvocations,
+  allToolInvocations,
   defaultOpen = false,
   className,
 }: SingleToolViewProps) {
@@ -181,6 +157,7 @@ function SingleToolView({
     return (
       <SingleToolCard
         toolData={toolsToDisplay[0]}
+        allToolInvocations={allToolInvocations}
         defaultOpen={defaultOpen}
         className={className}
       />
@@ -195,6 +172,7 @@ function SingleToolView({
           <SingleToolCard
             key={tool.toolCallId}
             toolData={tool}
+            allToolInvocations={allToolInvocations}
             defaultOpen={defaultOpen}
           />
         ))}
@@ -206,25 +184,64 @@ function SingleToolView({
 // New component to handle individual tool cards
 function SingleToolCard({
   toolData,
+  allToolInvocations,
   defaultOpen = false,
   className,
 }: {
   toolData: ToolPart
+  allToolInvocations?: ToolPart[]
   defaultOpen?: boolean
   className?: string
 }) {
   const [isExpanded, setIsExpanded] = useState(defaultOpen)
-  const { state, toolCallId } = toolData
+  const { state } = toolData
 
   // Extract tool name from type (e.g., "tool-search" -> "search")
   const toolName = toolData.type === "dynamic-tool"
     ? toolData.toolName
     : toolData.type.replace(/^tool-/, "")
 
-  const args = "input" in toolData ? toolData.input : undefined
   const isLoading = state === "input-streaming" || state === "input-available"
   const isCompleted = state === "output-available"
   const result = isCompleted && "output" in toolData ? toolData.output : undefined
+
+  // Helper function to find MV cover data from all tool invocations
+  const findMVCoverData = useMemo(() => {
+    if (!allToolInvocations) return null
+
+    // Find generateMVCover tool result
+    const coverTool = allToolInvocations.find((tool) => {
+      const name = tool.type === "dynamic-tool" ? tool.toolName : tool.type.replace(/^tool-/, "")
+      return name === "generateMVCover" && tool.state === "output-available"
+    })
+
+    if (!coverTool || !("output" in coverTool)) return null
+
+    try {
+      const coverResult = coverTool.output
+
+      if (
+        typeof coverResult === "object" &&
+        coverResult !== null &&
+        "content" in coverResult &&
+        Array.isArray(coverResult.content)
+      ) {
+        const textContent = coverResult.content.find(
+          (item: { type: string; text?: string }) => item.type === "text"
+        )
+        if (textContent?.text) {
+          const parsed = JSON.parse(textContent.text)
+          if (typeof parsed.imageUrl === "string") {
+            return parsed as { imageUrl: string; description?: string; width?: number; height?: number }
+          }
+        }
+      }
+    } catch {
+      // Failed to parse cover data
+    }
+
+    return null
+  }, [allToolInvocations])
 
   // Parse the result JSON if available
   const { parsedResult, parseError } = useMemo(() => {
@@ -261,29 +278,158 @@ function SingleToolCard({
     }
   }, [isCompleted, result])
 
-  // Format the arguments for display
-  const formattedArgs = args && typeof args === "object" && args !== null
-    ? Object.entries(args as Record<string, unknown>).map(([key, value]) => (
-        <div key={key} className="mb-1">
-          <span className="text-muted-foreground font-medium">{key}:</span>{" "}
-          <span className="font-mono">
-            {typeof value === "object"
-              ? value === null
-                ? "null"
-                : Array.isArray(value)
-                  ? value.length === 0
-                    ? "[]"
-                    : JSON.stringify(value)
-                  : JSON.stringify(value)
-              : String(value)}
-          </span>
-        </div>
-      ))
-    : null
-
   // Render generic results based on their structure
   const renderResults = () => {
     if (!parsedResult) return "No result data available"
+
+    // Custom renderer for generateMVCover tool - show cover image
+    if (toolName === "generateMVCover" && typeof parsedResult === "object" && parsedResult !== null) {
+      const coverResult = parsedResult as Record<string, unknown>
+      if (typeof coverResult.imageUrl === "string") {
+        return (
+          <div className="space-y-3">
+            <div className="relative overflow-hidden rounded-lg">
+              <img
+                src={coverResult.imageUrl}
+                alt="MV Cover"
+                className="w-full h-auto object-cover"
+                style={{ maxHeight: "400px" }}
+              />
+            </div>
+            {typeof coverResult.description === "string" && coverResult.description && (
+              <p className="text-xs text-muted-foreground italic">{coverResult.description}</p>
+            )}
+            <div className="flex gap-2 text-xs text-muted-foreground">
+              {typeof coverResult.width === "number" && typeof coverResult.height === "number" && (
+                <span>{coverResult.width} × {coverResult.height}</span>
+              )}
+            </div>
+          </div>
+        )
+      }
+    }
+
+    // Custom renderer for generateMusic tool - show audio player with enhanced design
+    if (toolName === "generateMusic" && typeof parsedResult === "object" && parsedResult !== null) {
+      const musicResult = parsedResult as Record<string, unknown>
+      if (typeof musicResult.audioUrl === "string") {
+        // Extract MV name from metadata (genre + mood)
+        const metadata = musicResult.metadata as Record<string, unknown> | undefined
+        const genre = typeof metadata?.genre === "string" ? metadata.genre : ""
+        const mood = typeof metadata?.mood === "string" ? metadata.mood : ""
+        const mvName = mood ? `${genre} / ${mood}` : genre || "Music"
+
+        return (
+          <div className="space-y-4">
+            {/* MV Cover Image (if available) */}
+            {findMVCoverData && (
+              <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary/10 to-primary/20">
+                <img
+                  src={findMVCoverData.imageUrl}
+                  alt="MV Cover"
+                  className="w-full h-auto object-cover"
+                  style={{ maxHeight: "400px" }}
+                />
+                {/* MV Name Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-4">
+                  <h3 className="text-white font-bold text-lg drop-shadow-lg">{mvName}</h3>
+                </div>
+              </div>
+            )}
+
+            {/* Audio Player */}
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4">
+              <audio controls src={musicResult.audioUrl} className="w-full" />
+            </div>
+
+            {/* Description */}
+            {typeof musicResult.description === "string" && (
+              <p className="text-sm leading-relaxed">{musicResult.description}</p>
+            )}
+
+            {/* Metadata Tags */}
+            {musicResult.metadata && typeof musicResult.metadata === "object" ? (
+              <div className="flex flex-wrap gap-2">
+                {typeof (musicResult.metadata as Record<string, unknown>).genre === "string" && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                    {(musicResult.metadata as Record<string, unknown>).genre as string}
+                  </span>
+                )}
+                {typeof (musicResult.metadata as Record<string, unknown>).mood === "string" && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+                    {(musicResult.metadata as Record<string, unknown>).mood as string}
+                  </span>
+                )}
+              </div>
+            ) : null}
+          </div>
+        )
+      }
+    }
+
+    // Custom renderer for writeLyrics tool - format lyrics nicely
+    if (toolName === "writeLyrics" && typeof parsedResult === "object" && parsedResult !== null) {
+      const lyricsResult = parsedResult as Record<string, unknown>
+      if (typeof lyricsResult.lyrics === "string") {
+        return (
+          <div className="space-y-3">
+            <pre className="whitespace-pre-wrap font-mono text-sm bg-muted p-3 rounded">
+              {lyricsResult.lyrics}
+            </pre>
+            {lyricsResult.metadata && typeof lyricsResult.metadata === "object" ? (
+              <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
+                {Object.entries(lyricsResult.metadata as Record<string, unknown>).map(([key, value]) => (
+                  <span key={key} className="bg-secondary px-2 py-1 rounded">
+                    {key}: {String(value)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        )
+      }
+    }
+
+    // Custom renderer for fetchWebsiteContent tool - show structured content
+    if (toolName === "fetchWebsiteContent" && typeof parsedResult === "object" && parsedResult !== null) {
+      const contentResult = parsedResult as Record<string, unknown>
+      return (
+        <div className="space-y-2">
+          {typeof contentResult.title === "string" && (
+            <h4 className="font-semibold">{contentResult.title}</h4>
+          )}
+          {typeof contentResult.description === "string" && (
+            <p className="text-sm text-muted-foreground">{contentResult.description}</p>
+          )}
+          {typeof contentResult.url === "string" && (
+            <a
+              href={contentResult.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary text-xs font-mono hover:underline flex items-center gap-1"
+            >
+              {contentResult.url}
+              <Link className="h-3 w-3" />
+            </a>
+          )}
+          {typeof contentResult.sourceType === "string" && (
+            <div className="text-xs text-muted-foreground">
+              Source: {contentResult.sourceType}
+            </div>
+          )}
+          {typeof contentResult.content === "string" && (
+            <details className="text-sm">
+              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                Show full content
+              </summary>
+              <div className="mt-2 max-h-60 overflow-auto bg-muted p-3 rounded whitespace-pre-wrap">
+                {contentResult.content}
+              </div>
+            </details>
+          )}
+        </div>
+      )
+    }
 
     // Handle array of items with url, title, and snippet (like search results)
     if (Array.isArray(parsedResult) && parsedResult.length > 0) {
@@ -445,24 +591,10 @@ function SingleToolCard({
             transition={TRANSITION}
             className="overflow-hidden"
           >
-            <div className="space-y-3 px-3 pt-3 pb-3">
-              {formattedArgs && (
-                <div>
-                  <div className="text-muted-foreground mb-1 text-xs font-medium">
-                    Arguments
-                  </div>
-                  <div className="bg-background rounded border p-2 text-sm">
-                    {formattedArgs}
-                  </div>
-                </div>
-              )}
-
+            <div className="px-3 pt-3 pb-3">
               {isCompleted && (
                 <div>
-                  <div className="text-muted-foreground mb-1 text-xs font-medium">
-                    Result
-                  </div>
-                  <div className="bg-background max-h-60 overflow-auto rounded border p-2 text-sm">
+                  <div className="bg-background overflow-auto rounded text-sm">
                     {parseError ? (
                       <div className="text-red-500">{parseError}</div>
                     ) : (
@@ -471,18 +603,102 @@ function SingleToolCard({
                   </div>
                 </div>
               )}
-
-              <div className="text-muted-foreground flex items-center justify-between text-xs">
-                <div className="flex items-center">
-                  <Code className="mr-1 inline size-3" />
-                  Tool Call ID:{" "}
-                  <span className="ml-1 font-mono">{toolCallId}</span>
-                </div>
-              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+// Separate loading indicator component
+function LoadingIndicator({
+  toolName,
+}: {
+  toolName?: string
+}) {
+  const getMessage = () => {
+    if (!toolName) return null
+
+    switch (toolName) {
+      case "generateMusic":
+        return "Generating your music"
+      case "generateMVCover":
+        return "Creating cover image"
+      case "writeLyrics":
+        return "Writing lyrics"
+      case "fetchWebsiteContent":
+        return "Fetching content"
+      default:
+        return "Processing"
+    }
+  }
+
+  const message = getMessage()
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
+      className="flex items-center justify-start gap-3 py-4 my-2"
+    >
+      {/* Muse icon on the left */}
+      <img
+        alt="Muse"
+        width="24"
+        height="24"
+        src="/muse-icon.svg"
+        className="object-contain flex-shrink-0"
+      />
+
+      {/* Three dots wave animation */}
+      <div className="flex items-center gap-1">
+        <motion.div
+          className="size-2 bg-primary/60 rounded-full"
+          animate={{
+            y: [0, -6, 0],
+          }}
+          transition={{
+            duration: 0.6,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 0,
+          }}
+        />
+        <motion.div
+          className="size-2 bg-primary/60 rounded-full"
+          animate={{
+            y: [0, -6, 0],
+          }}
+          transition={{
+            duration: 0.6,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 0.2,
+          }}
+        />
+        <motion.div
+          className="size-2 bg-primary/60 rounded-full"
+          animate={{
+            y: [0, -6, 0],
+          }}
+          transition={{
+            duration: 0.6,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 0.4,
+          }}
+        />
+      </div>
+
+      {/* Text on the right - only show if there's a message */}
+      {message && (
+        <span className="text-sm text-muted-foreground">
+          {message}
+        </span>
+      )}
+    </motion.div>
   )
 }

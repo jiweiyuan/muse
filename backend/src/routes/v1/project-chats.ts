@@ -3,17 +3,18 @@ import {
   UIMessage,
   convertToModelMessages,
   generateId,
+  stepCountIs,
   streamText,
-  UI_MESSAGE_STREAM_HEADERS,
+  tool,
 } from "ai"
+import { z } from "zod"
 import { FastifyInstance } from "fastify"
 import fastifyPlugin from "fastify-plugin"
 import { createResumableStreamContext } from "resumable-stream/ioredis"
 import { ZodError } from "zod"
 import { createChatRequestSchema } from "@muse/shared-schemas"
 import { SYSTEM_PROMPT_DEFAULT } from "../../config/constants.js"
-import { getAllModels } from "../../domain/models/index.js"
-import { getProviderForModel } from "../../domain/openproviders/provider-map.js"
+import { openai, createOpenAI } from "@ai-sdk/openai"
 import {
   getRedisPublisher,
   getRedisSubscriber,
@@ -38,6 +39,12 @@ import {
   listProjectChats,
 } from "../../services/chats.js"
 import { generateChatTitle } from "../../services/title-generator.js"
+import {
+  generateMusicWithMiniMax,
+  generateLyrics,
+  fetchWebsiteContent,
+  generateMVCover,
+} from "../../services/music-generation/index.js"
 
 /**
  * Validates that a chat belongs to a specific project
@@ -195,78 +202,8 @@ export const registerProjectChatRoutes = fastifyPlugin(
      * GET /v1/projects/:projectId/chats/:chatId/stream
      * Resume existing stream for a chat
      */
-    app.get("/:chatId/stream", async (request, reply) => {
-      const { projectId, chatId } = request.params as {
-        projectId: string
-        chatId: string
-      }
-      const sessionUser = await resolveSessionUser(request)
-
-      if (!sessionUser) {
-        reply.status(401)
-        return { error: "Unauthorized" }
-      }
-
-      // Verify chat belongs to project
-      const isValid = await validateChatBelongsToProject(
-        chatId,
-        projectId,
-        sessionUser.id
-      )
-
-      if (!isValid) {
-        reply.status(404)
-        return { error: "Chat not found or does not belong to this project" }
-      }
-
-      const chat = await getChat(chatId, sessionUser.id)
-      if (!chat) {
-        reply.status(404)
-        return { error: "Chat not found" }
-      }
-
-      // Check if there's an active stream
-      if (!chat.activeStreamId) {
-        app.log.info(
-          { chatId },
-          "[STREAM RESUME] No active stream found, returning 204"
-        )
-        return reply.status(204).send()
-      }
-
-      app.log.info(
-        { chatId, streamId: chat.activeStreamId },
-        "[STREAM RESUME] Resuming existing stream"
-      )
-
-      try {
-        const publisher = getRedisPublisher()
-        const subscriber = getRedisSubscriber()
-
-        const streamContext = createResumableStreamContext({
-          waitUntil: null,
-          subscriber,
-          publisher,
-        })
-
-        const resumedStream = await streamContext.resumeExistingStream(
-          chat.activeStreamId
-        )
-
-        Object.entries(UI_MESSAGE_STREAM_HEADERS).forEach(([key, value]) => {
-          reply.header(key, value)
-        })
-
-        return reply.send(resumedStream)
-      } catch (error) {
-        app.log.error(
-          { error, chatId, streamId: chat.activeStreamId },
-          "[STREAM RESUME] Failed to resume stream"
-        )
-        await updateChatStreamId(chatId, null)
-        return reply.status(204).send()
-      }
-    })
+    
+    
 
     /**
      * POST /v1/projects/:projectId/chats/:chatId/stream
@@ -283,13 +220,11 @@ export const registerProjectChatRoutes = fastifyPlugin(
           messages,
           userId,
           model,
-          enableSearch,
           message_group_id,
         } = request.body as {
           messages: UIMessage[]
           userId: string
           model: string
-          enableSearch?: boolean
           message_group_id?: string
         }
 
@@ -342,26 +277,179 @@ export const registerProjectChatRoutes = fastifyPlugin(
           }
         }
 
-        const allModels = await getAllModels()
-        const modelConfig = allModels.find((m) => m.id === model)
+        const apiKey = await getEffectiveApiKey(userId, "openai")
 
-        if (!modelConfig || !modelConfig.apiSdk) {
-          reply.status(404)
-          return { error: `Model ${model} not found` }
-        }
-
-        const provider = getProviderForModel(
-          model as import("../../domain/openproviders/types.js").SupportedModel
-        )
-        const apiKey = await getEffectiveApiKey(userId, provider)
+        // Use openai.chat() directly for GPT-5
+        const aiModel = apiKey
+          ? createOpenAI({ apiKey }).chat("gpt-5")
+          : openai.chat("gpt-5")
 
         // Clear any previous active stream before starting new one
         await updateChatStreamId(chatId, null)
 
         const result = streamText({
-          model: modelConfig.apiSdk(apiKey || undefined, { enableSearch }),
+          model: aiModel,
           system: SYSTEM_PROMPT_DEFAULT,
           messages: convertToModelMessages(messages),
+          stopWhen: stepCountIs(6), // Allow up to 5 consecutive tool call steps (e.g., writeLyrics → generateMusic)
+          tools: {
+            fetchWebsiteContent: tool({
+              description:
+                "Fetch and extract clean, structured content from a website URL. Use this when the user provides a URL to create music about a product, news article, or discussion.",
+              inputSchema: z.object({
+                url: z
+                  .string()
+                  .url()
+                  .describe(
+                    "The URL to fetch content from (must start with http:// or https://)"
+                  ),
+                extractType: z
+                  .enum(["summary", "full"])
+                  .optional()
+                  .default("summary")
+                  .describe(
+                    'Type of extraction: "summary" for key points, "full" for complete content'
+                  ),
+              }),
+              execute: async ({ url, extractType }) => {
+                try {
+                  const result = await fetchWebsiteContent({ url, extractType })
+                  return {
+                    title: result.title,
+                    content: result.content,
+                    description: result.description,
+                    url: result.url,
+                    sourceType: result.sourceType,
+                    publicationDate: result.publicationDate,
+                    summary: result.summary,
+                    metadata: result.metadata,
+                  }
+                } catch (error) {
+                  console.error("Error in fetchWebsiteContent tool:", error)
+                  throw error
+                }
+              },
+            }),
+            writeLyrics: tool({
+              description:
+                "Write song lyrics based on a theme, genre, or description. This should be called first before generating music. IMPORTANT: Write concise lyrics suitable for 1-2 minute songs (approximately 8-16 lines total with compact verse-chorus structure).",
+              inputSchema: z.object({
+                theme: z
+                  .string()
+                  .describe(
+                    "The theme or topic of the song (e.g., summer, love, adventure)"
+                  ),
+                genre: z
+                  .string()
+                  .describe("The music genre (e.g., pop, rock, jazz, hip-hop)"),
+                mood: z
+                  .string()
+                  .describe(
+                    "The mood or emotion (e.g., happy, sad, energetic, calm)"
+                  ),
+                structure: z
+                  .string()
+                  .optional()
+                  .describe('Song structure like "verse-chorus-verse" (optional)'),
+              }),
+              execute: async ({ theme, genre, mood, structure }) => {
+                try {
+                  const result = await generateLyrics({
+                    theme,
+                    genre,
+                    mood,
+                    structure,
+                  })
+                  return {
+                    lyrics: result.lyrics,
+                    metadata: result.metadata,
+                  }
+                } catch (error) {
+                  console.error("Error in writeLyrics tool:", error)
+                  throw error
+                }
+              },
+            }),
+            generateMusic: tool({
+              description:
+                "Generate music from lyrics using MiniMax Music 2.0. This should be called after lyrics have been written.",
+              inputSchema: z.object({
+                lyrics: z
+                  .string()
+                  .min(10)
+                  .max(3000)
+                  .describe(
+                    "The song lyrics to generate music for. Use \\n to separate lines. May include structure tags like [Intro], [Verse], [Chorus], [Bridge], [Outro]."
+                  ),
+                genre: z
+                  .string()
+                  .describe(
+                    'The music genre and style description (e.g., "Indie folk, melancholic, introspective")'
+                  ),
+                mood: z
+                  .string()
+                  .optional()
+                  .describe("Additional mood or scenario descriptors"),
+              }),
+              execute: async ({ lyrics, genre, mood }) => {
+                try {
+                  const result = await generateMusicWithMiniMax({
+                    lyrics,
+                    genre,
+                    mood,
+                  })
+                  return {
+                    audioUrl: result.audioUrl,
+                    format: result.format,
+                    metadata: result.metadata,
+                    description: result.description,
+                  }
+                } catch (error) {
+                  console.error("Error in generateMusic tool:", error)
+                  throw error
+                }
+              },
+            }),
+            generateMVCover: tool({
+              description:
+                "Generate a cover image for the music video based on the lyrics, genre, and mood. Call this after generating music to create a visual representation.",
+              inputSchema: z.object({
+                prompt: z
+                  .string()
+                  .describe(
+                    "A detailed visual description for the cover image. Should be based on the song's theme, mood, and genre. Be creative and vivid."
+                  ),
+                aspectRatio: z
+                  .enum(["1:1", "16:9", "3:2", "4:3", "9:16"])
+                  .optional()
+                  .default("1:1")
+                  .describe("The aspect ratio of the cover image"),
+                resolution: z
+                  .enum(["1K", "2K", "4K"])
+                  .optional()
+                  .default("2K")
+                  .describe("The resolution of the generated image"),
+              }),
+              execute: async ({ prompt, aspectRatio, resolution }) => {
+                try {
+                  const result = await generateMVCover({
+                    prompt,
+                    aspectRatio,
+                    resolution,
+                  })
+                  return {
+                    imageUrl: result.imageUrl,
+                    width: result.width,
+                    height: result.height,
+                    description: result.description,
+                  }
+                } catch (error) {
+                  console.error("Error in generateMVCover tool:", error)
+                  throw error
+                }
+              },
+            }),
+          },
           onFinish: async ({ response }) => {
             await saveAssistantMessage({
               chatId,

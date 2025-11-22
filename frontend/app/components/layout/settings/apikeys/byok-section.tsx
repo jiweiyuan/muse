@@ -20,7 +20,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
 import { fetchClient } from "@/lib/fetch"
-import { useModel } from "@/lib/model-store/provider"
 import { API_ROUTE_USER_KEYS } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { KeyIcon, PlusIcon } from "@phosphor-icons/react"
@@ -82,7 +81,12 @@ const PROVIDERS: Provider[] = [
 
 export function ByokSection() {
   const queryClient = useQueryClient()
-  const { userKeyStatus, refreshAll } = useModel()
+  // Simplified: No model-specific key tracking needed for single GPT-5 model
+  const userKeyStatus: Record<string, boolean> = {}
+  const refreshAll = async () => {
+    // Refresh query cache when keys change
+    queryClient.invalidateQueries()
+  }
   const [selectedProvider, setSelectedProvider] = useState<string>("openrouter")
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)

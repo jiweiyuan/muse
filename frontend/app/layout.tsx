@@ -4,7 +4,6 @@ import "./globals.css"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { ModelProvider } from "@/lib/model-store/provider"
 import { ProjectsProvider } from "@/lib/projects/provider"
 import { TanstackQueryProvider } from "@/lib/tanstack-query/tanstack-query-provider"
 import { UserPreferencesProvider } from "@/lib/user-preference-store/provider"
@@ -51,8 +50,7 @@ export default function RootLayout({
         <TanstackQueryProvider>
           <UserProvider initialUser={null}>
             <ProjectsProvider>
-              <ModelProvider>
-                <UserPreferencesProvider>
+              <UserPreferencesProvider>
                   <TooltipProvider
                     delayDuration={200}
                     skipDelayDuration={500}
@@ -70,7 +68,6 @@ export default function RootLayout({
                     </ThemeProvider>
                   </TooltipProvider>
                 </UserPreferencesProvider>
-              </ModelProvider>
             </ProjectsProvider>
           </UserProvider>
         </TanstackQueryProvider>

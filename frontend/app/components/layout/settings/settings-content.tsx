@@ -5,7 +5,6 @@ import { DrawerClose } from "@/components/ui/drawer"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn, isDev } from "@/lib/utils"
 import {
-  CubeIcon,
   GearSixIcon,
   KeyIcon,
   PaintBrushIcon,
@@ -18,13 +17,13 @@ import { InteractionPreferences } from "./appearance/interaction-preferences"
 import { ConnectionsPlaceholder } from "./connections/connections-placeholder"
 import { DeveloperTools } from "./connections/developer-tools"
 import { UserProfile } from "./general/user-profile"
-import { ModelsSettings } from "./models/models-settings"
+// ModelsSettings removed - simplified to single GPT-5 model
 
 type SettingsContentProps = {
   isDrawer?: boolean
 }
 
-type TabType = "general" | "appearance" | "models" | "connections"
+type TabType = "general" | "appearance" | "apikeys" | "connections"
 
 export function SettingsContent({
   isDrawer = false,
@@ -84,13 +83,6 @@ export function SettingsContent({
                   <span>API Keys</span>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="models"
-                  className="flex shrink-0 items-center gap-2"
-                >
-                  <CubeIcon className="size-4" />
-                  <span>Models</span>
-                </TabsTrigger>
-                <TabsTrigger
                   value="connections"
                   className="flex shrink-0 items-center gap-2"
                 >
@@ -111,11 +103,6 @@ export function SettingsContent({
 
             <TabsContent value="apikeys" className="px-6">
               <ByokSection />
-            </TabsContent>
-
-            <TabsContent value="models" className="px-6">
-              <ModelsSettings />
-              {/* <ModelVisibilitySettings /> */}
             </TabsContent>
 
             <TabsContent value="connections" className="space-y-6 px-6">
@@ -158,15 +145,6 @@ export function SettingsContent({
                   </div>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="models"
-                  className="w-full justify-start rounded-md px-3 py-2 text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <CubeIcon className="size-4" />
-                    <span>Models</span>
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger
                   value="connections"
                   className="w-full justify-start rounded-md px-3 py-2 text-left"
                 >
@@ -190,11 +168,6 @@ export function SettingsContent({
 
               <TabsContent value="apikeys" className="mt-0 space-y-6">
                 <ByokSection />
-              </TabsContent>
-
-              <TabsContent value="models" className="mt-0 space-y-6">
-                <ModelsSettings />
-                {/* <ModelVisibilitySettings /> */}
               </TabsContent>
 
               <TabsContent value="connections" className="mt-0 space-y-6">

@@ -26,6 +26,8 @@ const envSchema = z.object({
   OPENROUTER_API_KEY: z.string().optional(),
   REPLICATE_API_TOKEN: z.string().optional(),
   REPLICATE_RATE_LIMIT: z.coerce.number().int().positive().default(50),
+  FAL_KEY: z.string().optional(),
+  VALYU_API_KEY: z.string().optional(),
   FRONTEND_ORIGIN: z.string().optional(),
   BACKEND_URL: z.string().url().optional(),
   // Cloudflare R2 Storage

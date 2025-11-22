@@ -68,7 +68,20 @@ export function MessageAssistant({
         {toolInvocationParts &&
           toolInvocationParts.length > 0 &&
           preferences.showToolInvocations && (
-            <ToolInvocation toolInvocations={toolInvocationParts} />
+            <ToolInvocation
+              toolInvocations={toolInvocationParts}
+              isStreaming={status === "streaming"}
+            />
+          )}
+
+        {/* Show loading indicator when streaming but no tools are running */}
+        {status === "streaming" &&
+          (!toolInvocationParts || toolInvocationParts.length === 0) &&
+          preferences.showToolInvocations && (
+            <ToolInvocation
+              toolInvocations={[]}
+              isStreaming={true}
+            />
           )}
 
         {searchImageResults.length > 0 && (

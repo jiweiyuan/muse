@@ -1,12 +1,7 @@
 export const DAILY_FILE_UPLOAD_LIMIT = 5
 
-export const FREE_MODELS_IDS = [
-  "openrouter:deepseek/deepseek-r1:free",
-  "openrouter:meta-llama/llama-3.3-8b-instruct:free",
-  "gpt-4.1-nano",
-]
-
-export const MODEL_DEFAULT = "gpt-4.1-nano"
+// Simplified to use only GPT-5 Mini
+export const MODEL_DEFAULT = "gpt-5-mini-2025-08-07"
 
 export const APP_NAME = "Muse"
 export const APP_DOMAIN = "https://muse.com"

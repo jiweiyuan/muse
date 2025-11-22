@@ -79,8 +79,8 @@ export function CanvasContainer({
             style={{
               top: '8px',
               left: '8px',
+              right: '8px',
               bottom: '8px',
-              width: '480px',
               visibility: chatVisible ? 'visible' : 'hidden',
             }}
           >

@@ -4,6 +4,7 @@ import { ChatInput } from "@/app/components/chat-input/chat-input"
 import { Conversation } from "@/app/components/chat/conversation"
 import { useModel } from "@/app/components/chat/use-model"
 import { useFileUpload } from "@/app/components/chat/use-file-upload"
+import { useToolShapeCreator } from "@/app/components/chat/use-tool-shape-creator"
 import { useChatDraft } from "@/app/hooks/use-chat-draft"
 import { useChatSubmit } from "@/app/hooks/use-chat-submit"
 import { useMessageHandlers } from "@/app/hooks/use-message-handlers"
@@ -11,9 +12,9 @@ import { toast } from "@/components/ui/toast"
 import { useChats } from "@/lib/chat-store/chats/provider"
 import { useMessages } from "@/lib/chat-store/messages/provider"
 import { useProjectStore } from "@/lib/project-store"
-import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
+import { useCanvasStore } from "@/lib/canvas-store/provider"
+import { SYSTEM_PROMPT_DEFAULT, MODEL_DEFAULT } from "@/lib/config"
 import { API_BASE } from "@/lib/routes"
-import { getModelInfo } from "@/lib/models"
 import { usePendingMessageStore } from "@/lib/pending-message-store"
 import { useUser } from "@/lib/user-store/provider"
 import { cn } from "@/lib/utils"
@@ -103,12 +104,11 @@ export function ConversationChat({ chatTitle, onCollapse, onNavigate }: Conversa
     handleFileRemove,
   } = useFileUpload()
 
-  // Model selection
-  const { selectedModel } = useModel({
-    currentChat: currentChat || null,
-    user,
-    chatId,
-  })
+  // Canvas integration
+  const { editor, canvasId } = useCanvasStore()
+
+  // Model selection (simplified: always GPT-5)
+  const { selectedModel } = useModel()
 
   // State
   const isAuthenticated = useMemo(() => !!user?.id, [user?.id])
@@ -176,6 +176,15 @@ export function ConversationChat({ chatTitle, onCollapse, onNavigate }: Conversa
     () => dedupeMessages(chatMessages),
     [chatMessages]
   )
+
+  // Auto-create canvas shapes when AI tools are invoked
+  useToolShapeCreator({
+    messages,
+    editor,
+    canvasId: canvasId || undefined,
+    projectId: activeProjectId || undefined,
+    enabled: !!editor && !!canvasId,
+  })
 
   useEffect(() => {
     // Keep the underlying chat state deduped so downstream handlers stay in sync
@@ -524,7 +533,7 @@ export function ConversationChat({ chatTitle, onCollapse, onNavigate }: Conversa
       status,
       setEnableSearch,
       enableSearch,
-      hasSearchSupport: Boolean(getModelInfo(selectedModel)?.webSearch),
+      hasSearchSupport: false, // Simplified: GPT-5
     }),
     [
       input,

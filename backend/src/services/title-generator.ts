@@ -4,7 +4,7 @@ import { getEffectiveApiKey } from "./userKeys.js"
 
 /**
  * Generate a concise chat title from the user's first message
- * Uses a fast, inexpensive model (gpt-4o-mini) for title generation
+ * Uses GPT-5 for title generation
  */
 export async function generateChatTitle(
   userMessage: string,
@@ -14,12 +14,12 @@ export async function generateChatTitle(
     // Truncate message if too long (keep first 1000 chars)
     const truncatedMessage = userMessage.slice(0, 1000)
 
-    const openai = createOpenAI({
-      apiKey: apiKey || process.env.OPENAI_API_KEY,
-    })
+    const aiModel = apiKey
+      ? createOpenAI({ apiKey }).chat("gpt-5")
+      : openai.chat("gpt-5")
 
     const { text } = await generateText({
-      model: openai("gpt-4o-mini"),
+      model: aiModel,
       prompt: `Generate a concise, descriptive title (max 6 words) for a chat conversation that starts with this message: "${truncatedMessage}".
 
 Rules:
@@ -68,13 +68,13 @@ export async function generateTitleFromPrompt(
 
   // Get user-specific or default OpenAI API key
   const apiKey = userId ? await getEffectiveApiKey(userId, "openai") : undefined
-  const model = apiKey
-    ? createOpenAI({ apiKey })("gpt-4o-mini")
-    : openai("gpt-4o-mini")
+  const aiModel = apiKey
+    ? createOpenAI({ apiKey }).chat("gpt-5")
+    : openai.chat("gpt-5")
 
-  // Use OpenAI GPT-4o Mini (fast and cost-effective)
+  // Use GPT-5 (fast and intelligent)
   const { text } = await generateText({
-    model,
+    model: aiModel,
     system:
       "You are a professional image title generator. " +
       "You write simple, clear, and concise titles. " +

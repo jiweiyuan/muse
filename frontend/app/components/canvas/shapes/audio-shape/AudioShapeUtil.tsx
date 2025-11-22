@@ -27,7 +27,7 @@ function AudioPlayer({ shape, editor }: { shape: AudioShape; editor: any }) {
   // Get asset URL from editor
   const assetId = shape.props.assetId
   const asset = assetId ? editor.getAsset(assetId) : null
-  const audioUrl = asset?.props?.src || ""
+  const audioUrl = asset?.props?.src || null
   const audioTitle =
     (asset?.type === 'video' ? asset.props.name : undefined) ||
     asset?.meta?.title ||
@@ -117,7 +117,7 @@ function AudioPlayer({ shape, editor }: { shape: AudioShape; editor: any }) {
         height: shape.props.h,
       }}
     >
-      <audio ref={audioRef} src={audioUrl} />
+      {audioUrl && <audio ref={audioRef} src={audioUrl} />}
 
       {/* Title */}
       <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 overflow-hidden text-ellipsis whitespace-nowrap">

@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { AssetRecordType, createShapeId, uniqueId, type TLShapeId } from "tldraw"
+import { type TLShapeId } from "tldraw"
 import { Sparkles, ChevronRight, Mic, Music, Zap } from "lucide-react"
 import { useCanvasStore } from "@/lib/canvas-store/provider"
 import { useProjectStore } from "@/lib/project-store"
 import { motion, AnimatePresence } from "framer-motion"
-import { findNewAssetPosition, panAndZoomToImage } from "@/lib/canvas-utils"
+import { createAudioPlaceholderShape } from "@/lib/canvas-utils"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CollapseChatIcon } from "@/components/icons/collapse-chat"
@@ -127,40 +127,19 @@ export const AudioGenerator = ({ visible, onClose }: AudioGeneratorProps) => {
     setIsGenerating(true)
 
     let placeholderShapeId: TLShapeId | null = null
+    let storageAssetId: string | null = null
 
     try {
-      // Calculate audio shape dimensions (fixed size)
-      const audioWidth = 320
-      const audioHeight = 160
-      const position = findNewAssetPosition(editor, audioWidth, audioHeight)
-
-      // Generate storage ID
-      const storageAssetId = `${uniqueId()}-ai-audio-${Date.now()}.mp3`
-
-      // Create placeholder audio shape
-      placeholderShapeId = createShapeId()
-      editor.createShape({
-        id: placeholderShapeId,
-        type: "audio",
-        x: position.x,
-        y: position.y,
-        props: {
-          w: audioWidth,
-          h: audioHeight,
-          assetId: AssetRecordType.createId(),
-        },
-        opacity: 1,
-        meta: {
-          isProcessing: true,
-          operation: "generate-audio",
-          startTime: Date.now(),
-          prompt: userPrompt,
-          modelId: selectedModelId,
-          audioType: activeTab,
-        },
+      // Create placeholder audio shape using shared utility
+      const result = createAudioPlaceholderShape(editor, {
+        prompt: userPrompt,
+        modelId: selectedModelId,
+        audioType: activeTab,
+        operation: "generate-audio",
       })
 
-      panAndZoomToImage(editor, position.x, position.y, audioWidth, audioHeight)
+      placeholderShapeId = result.shapeId
+      storageAssetId = result.storageAssetId
 
       if (!activeProjectId) {
         throw new Error("No active project")

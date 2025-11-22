@@ -23,12 +23,8 @@ export function HomePage() {
   // File upload functionality
   const { files, handleFileUpload, handleFileRemove } = useFileUpload()
 
-  // Model selection
-  const { selectedModel } = useModel({
-    currentChat: null,
-    user,
-    chatId: null,
-  })
+  // Model selection (simplified: always GPT-5)
+  const { selectedModel } = useModel()
 
   const [input, setInput] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)

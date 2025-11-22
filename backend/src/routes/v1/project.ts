@@ -223,7 +223,7 @@ export const registerProjectRoutes = fastifyPlugin(
     /**
      * Register nested chat routes under /v1/projects/:projectId/chats
      */
-    app.register(registerProjectChatRoutes, { prefix: "/:projectId/chats" })
+    await app.register(registerProjectChatRoutes, { prefix: "/:projectId/chats" })
   },
   { encapsulate: true }
 )

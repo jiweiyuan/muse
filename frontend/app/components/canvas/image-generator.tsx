@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { AssetRecordType, createShapeId, uniqueId, type TLShapeId } from "tldraw"
-import { Sparkles, ChevronRight, Image as ImageIcon, X } from "lucide-react"
+import { Sparkles, Image as ImageIcon, X } from "lucide-react"
 import { ReferenceIcon } from "@/components/icons/reference"
 import { useCanvasStore } from "@/lib/canvas-store/provider"
 import { useProjectStore } from "@/lib/project-store"
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { CollapseChatIcon } from "@/components/icons/collapse-chat"
-import { ModelSelectorModal } from "./model-selector-modal"
 import { ModelParamsForm } from "./model-params-form"
 import { ReferenceAsset, type ImageAsset } from "./reference-asset"
 import type { ImageModelId } from "@muse/shared-schemas"
@@ -37,7 +36,6 @@ export const ImageGenerator = ({ visible, onClose }: ImageGeneratorProps) => {
 
   // UI State
   const [activeTab, setActiveTab] = useState<"text-to-image" | "image-to-image">("text-to-image")
-  const [showModelSelector, setShowModelSelector] = useState(false)
   const [showReferenceAsset, setShowReferenceAsset] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
 
@@ -236,27 +234,14 @@ export const ImageGenerator = ({ visible, onClose }: ImageGeneratorProps) => {
                   <TabsTrigger value="image-to-image">Image to Image</TabsTrigger>
                   <TabsTrigger value="text-to-image">Text to Image</TabsTrigger>
                 </TabsList>
-                {/* Model Selector Dropdown */}
-                <ModelSelectorModal
-                  open={showModelSelector}
-                  onOpenChange={setShowModelSelector}
-                  currentModelId={selectedModelId}
-                  onSelectModel={setSelectedModelId}
-                  mode={activeTab}
-                  trigger={
-                    <button
-                      disabled={isGenerating}
-                      className="w-full h-12 flex items-center gap-2 rounded-lg border border-border px-3 transition-all disabled:opacity-50 hover:bg-accent"
-                    >
-                      <div
-                        className="w-6 h-6 rounded bg-muted bg-contain bg-no-repeat bg-center shrink-0"
-                        style={{ backgroundImage: `url(${currentModel.thumbnail})` }}
-                      />
-                      <span className="text-sm font-medium flex-1 text-left">{currentModel.name}</span>
-                      <ChevronRight size={14} className="opacity-60" />
-                    </button>
-                  }
-                />
+                {/* Model Display - Simplified */}
+                <div className="w-full h-12 flex items-center gap-2 rounded-lg border border-border px-3 bg-muted/50">
+                  <div
+                    className="w-6 h-6 rounded bg-muted bg-contain bg-no-repeat bg-center shrink-0"
+                    style={{ backgroundImage: `url(${currentModel.thumbnail})` }}
+                  />
+                  <span className="text-sm font-medium flex-1 text-left">{currentModel.name}</span>
+                </div>
               </div>
 
               {/* Scrollable Content */}

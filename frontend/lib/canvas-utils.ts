@@ -1,4 +1,5 @@
-import type { Editor, TLAssetId } from "tldraw"
+import type { Editor, TLAssetId, TLShapeId } from "tldraw"
+import { AssetRecordType, createShapeId, uniqueId } from "tldraw"
 
 /**
  * Find an empty position on the canvas to place an image
@@ -336,4 +337,187 @@ export function extractCanvasAssets(editor: Editor): CanvasAsset[] {
 
   // Sort by creation order (newer items first)
   return assets.reverse()
+}
+
+/**
+ * Metadata for creating an audio placeholder shape
+ */
+export interface AudioPlaceholderMetadata {
+  prompt?: string
+  modelId?: string
+  audioType?: string
+  operation?: string
+  toolCallId?: string
+  [key: string]: any
+}
+
+/**
+ * Create a placeholder audio shape on the canvas
+ * Used when starting audio generation to show loading state
+ *
+ * @param editor - The tldraw editor instance
+ * @param metadata - Optional metadata to store in the shape (prompt, modelId, etc.)
+ * @returns Object with shapeId and storageAssetId
+ */
+export function createAudioPlaceholderShape(
+  editor: Editor,
+  metadata: AudioPlaceholderMetadata = {}
+): { shapeId: TLShapeId; storageAssetId: string } {
+  const audioWidth = 320
+  const audioHeight = 160
+  const position = findNewAssetPosition(editor, audioWidth, audioHeight)
+
+  // Generate storage ID for the audio file
+  const storageAssetId = `${uniqueId()}-ai-audio-${Date.now()}.mp3`
+
+  // Create placeholder audio shape
+  const placeholderShapeId = createShapeId()
+
+  // Only include JSON-serializable metadata (primitives only)
+  const serializableMeta: Record<string, string | number | boolean | null> = {
+    isProcessing: true,
+    operation: metadata.operation || "generate-audio",
+    startTime: Date.now(),
+  }
+
+  // Add optional primitive fields from metadata
+  if (metadata.prompt && typeof metadata.prompt === "string") {
+    serializableMeta.prompt = metadata.prompt
+  }
+  if (metadata.modelId && typeof metadata.modelId === "string") {
+    serializableMeta.modelId = metadata.modelId
+  }
+  if (metadata.audioType && typeof metadata.audioType === "string") {
+    serializableMeta.audioType = metadata.audioType
+  }
+  if (metadata.toolCallId && typeof metadata.toolCallId === "string") {
+    serializableMeta.toolCallId = metadata.toolCallId
+  }
+  if (metadata.genre && typeof metadata.genre === "string") {
+    serializableMeta.genre = metadata.genre
+  }
+
+  editor.createShape({
+    id: placeholderShapeId,
+    type: "audio",
+    x: position.x,
+    y: position.y,
+    props: {
+      w: audioWidth,
+      h: audioHeight,
+      assetId: AssetRecordType.createId(),
+    },
+    opacity: 1,
+    meta: serializableMeta,
+  })
+
+  // Pan and zoom to the new shape
+  panAndZoomToImage(editor, position.x, position.y, audioWidth, audioHeight)
+
+  return {
+    shapeId: placeholderShapeId,
+    storageAssetId,
+  }
+}
+
+/**
+ * Upload an external audio URL as a TLAsset
+ * Fetches the audio file and creates an asset in the editor
+ *
+ * @param editor - The tldraw editor instance
+ * @param audioUrl - External URL of the audio file
+ * @returns The created asset ID
+ */
+export async function uploadExternalAudioAsAsset(
+  editor: Editor,
+  audioUrl: string
+): Promise<TLAssetId> {
+  try {
+    // Fetch the audio file
+    const response = await fetch(audioUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch audio: ${response.statusText}`)
+    }
+
+    const blob = await response.blob()
+
+    // Create asset from blob
+    const assetId = AssetRecordType.createId()
+
+    // Convert blob to data URL for storage in tldraw
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+
+    // Create the asset record (tldraw uses video type for audio - see AudioShapeUtil.tsx:32)
+    editor.createAssets([
+      {
+        id: assetId,
+        type: "video",
+        typeName: "asset",
+        props: {
+          name: audioUrl.split("/").pop() || "audio.mp3",
+          src: dataUrl,
+          w: 320,
+          h: 160,
+          mimeType: blob.type || "audio/mpeg",
+          isAnimated: false,
+        },
+        meta: {},
+      },
+    ])
+
+    return assetId
+  } catch (error) {
+    console.error("Failed to upload external audio as asset:", error)
+    throw error
+  }
+}
+
+/**
+ * Link an audio URL to an existing placeholder shape
+ * Updates the shape's asset and removes the processing flag
+ *
+ * @param editor - The tldraw editor instance
+ * @param shapeId - ID of the placeholder shape to update
+ * @param audioUrl - URL of the generated audio file
+ */
+export async function linkAudioUrlToShape(
+  editor: Editor,
+  shapeId: TLShapeId,
+  audioUrl: string
+): Promise<void> {
+  try {
+    // Check if shape still exists
+    const shape = editor.getShape(shapeId)
+    if (!shape) {
+      console.warn(`Shape ${shapeId} not found, cannot link audio`)
+      return
+    }
+
+    // Upload audio as asset
+    const assetId = await uploadExternalAudioAsAsset(editor, audioUrl)
+
+    // Update the shape with the new asset and remove processing flag
+    editor.updateShape({
+      id: shapeId,
+      type: "audio",
+      props: {
+        assetId,
+      },
+      meta: {
+        ...shape.meta,
+        isProcessing: false,
+        completedAt: Date.now(),
+      },
+    })
+  } catch (error) {
+    console.error("Failed to link audio URL to shape:", error)
+    // If linking fails, delete the placeholder shape
+    editor.deleteShape(shapeId)
+    throw error
+  }
 }

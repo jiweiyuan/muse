@@ -6,8 +6,7 @@ import { useFileUpload } from "@/app/components/chat/use-file-upload"
 import { useChatDraft } from "@/app/hooks/use-chat-draft"
 import { toast } from "@/components/ui/toast"
 import { useChats } from "@/lib/chat-store/chats/provider"
-import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
-import { getModelInfo } from "@/lib/models"
+import { SYSTEM_PROMPT_DEFAULT, MODEL_DEFAULT } from "@/lib/config"
 import { usePendingMessageStore } from "@/lib/pending-message-store"
 import { useUser } from "@/lib/user-store/provider"
 import { useProjects } from "@/lib/projects/provider"
@@ -46,12 +45,8 @@ export function HomeChat() {
     handleFileRemove,
   } = useFileUpload()
 
-  // Model selection
-  const { selectedModel } = useModel({
-    currentChat: null,
-    user,
-    chatId: null,
-  })
+  // Model selection (simplified: always GPT-5)
+  const { selectedModel } = useModel()
 
   // State
   const [input, setInput] = useState(draftValue)
@@ -149,7 +144,7 @@ export function HomeChat() {
       status: "ready" as const,
       setEnableSearch,
       enableSearch,
-      hasSearchSupport: Boolean(getModelInfo(selectedModel)?.webSearch),
+      hasSearchSupport: false, // Simplified: GPT-5
     }),
     [
       input,

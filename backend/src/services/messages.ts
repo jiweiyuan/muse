@@ -5,8 +5,6 @@ import { messages } from "../infra/db/schema.js"
 import { sanitizeUserInput } from "./sanitize.js"
 import { ContentPart, MessagePayload } from "../types/messages.js"
 
-const DEFAULT_STEP = 0
-
 export async function logUserMessage({
   userId,
   chatId,
@@ -44,30 +42,47 @@ export async function saveAssistantMessage({
   model?: string
 }) {
   const parts: ContentPart[] = []
-  const toolMap = new Map<string, ContentPart>()
+  const toolMap = new Map<string, any>()
   const textParts: string[] = []
 
   for (const msg of payload) {
     if (msg.role === "assistant" && Array.isArray(msg.content)) {
-      for (const part of msg.content) {
+      for (const part of msg.content as any[]) {
         if (part.type === "text") {
           textParts.push(part.text || "")
           parts.push(part)
-        } else if (part.type === "tool-invocation" && part.toolInvocation) {
+        }
+        // AI SDK 5.0 format: tool parts have types like "tool-{toolName}" or "dynamic-tool"
+        else if (part.type?.startsWith("tool-") || part.type === "dynamic-tool") {
+          const toolCallId = part.toolCallId || ""
+          if (!toolCallId) continue
+
+          // Keep the most recent state for each tool call
+          const existing = toolMap.get(toolCallId)
+          const existingState = existing?.state || ""
+          const currentState = part.state || ""
+
+          // Priority: output-available > input-available > input-streaming
+          const shouldUpdate =
+            !existing ||
+            currentState === "output-available" ||
+            (currentState === "input-available" && existingState === "input-streaming")
+
+          if (shouldUpdate) {
+            toolMap.set(toolCallId, part)
+          }
+        }
+        // Fallback for old format
+        else if (part.type === "tool-invocation" && part.toolInvocation) {
           const { toolCallId, state } = part.toolInvocation
           if (!toolCallId) continue
 
           const existing = toolMap.get(toolCallId)
           if (state === "result" || !existing) {
-            toolMap.set(toolCallId, {
-              ...part,
-              toolInvocation: {
-                ...part.toolInvocation,
-                args: part.toolInvocation?.args || {},
-              },
-            })
+            toolMap.set(toolCallId, part)
           }
-        } else if (part.type === "reasoning") {
+        }
+        else if (part.type === "reasoning") {
           parts.push({
             type: "reasoning",
             reasoning: part.text || "",
@@ -83,18 +98,16 @@ export async function saveAssistantMessage({
         }
       }
     } else if (msg.role === "tool" && Array.isArray(msg.content)) {
-      for (const part of msg.content) {
+      for (const part of msg.content as any[]) {
         if (part.type === "tool-result") {
           const toolCallId = part.toolCallId || ""
+          // Store as AI SDK 5.0 format
           toolMap.set(toolCallId, {
-            type: "tool-invocation",
-            toolInvocation: {
-              state: "result",
-              step: DEFAULT_STEP,
-              toolCallId,
-              toolName: part.toolName || "",
-              result: part.result,
-            },
+            type: `tool-${part.toolName || "unknown"}`,
+            toolCallId,
+            toolName: part.toolName || "",
+            state: "output-available",
+            output: part.result,
           })
         }
       }
