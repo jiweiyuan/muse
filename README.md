@@ -47,16 +47,6 @@ ai@5.0.63                # Vercel AI SDK core
 ws@8.18.0                # WebSocket server
 ```
 
-### AI Providers
-```
-@ai-sdk/openai           # GPT-4, GPT-4o
-@ai-sdk/anthropic        # Claude 3.5 Sonnet
-@ai-sdk/google           # Gemini Pro
-@ai-sdk/mistral          # Mistral Large
-@openrouter/ai-sdk-provider  # Multi-provider fallback
-replicate                # Image/video models
-```
-
 ## Project Structure
 
 ```

@@ -109,6 +109,10 @@ function AudioPlayer({ shape, editor }: { shape: AudioShape; editor: any }) {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`
   }
 
+  const stopEventPropagation = (e: React.PointerEvent | React.MouseEvent) => {
+    e.stopPropagation()
+  }
+
   return (
     <div
       className="flex flex-col bg-gray-100 dark:bg-gray-900 p-4 pointer-events-auto border border-gray-200 dark:border-gray-800"
@@ -119,7 +123,7 @@ function AudioPlayer({ shape, editor }: { shape: AudioShape; editor: any }) {
     >
       {audioUrl && <audio ref={audioRef} src={audioUrl} />}
 
-      {/* Title */}
+      {/* Title - Can be used as drag handle */}
       <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 overflow-hidden text-ellipsis whitespace-nowrap">
         {audioTitle}
       </div>
@@ -131,9 +135,10 @@ function AudioPlayer({ shape, editor }: { shape: AudioShape; editor: any }) {
           max={duration || 0}
           step={0.1}
           onValueChange={handleSeek}
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
-          onPointerMove={(e) => e.stopPropagation()}
+          onPointerDown={stopEventPropagation}
+          onPointerUp={stopEventPropagation}
+          onPointerMove={stopEventPropagation}
+          onClick={stopEventPropagation}
           className="cursor-pointer"
         />
       </div>
@@ -148,10 +153,13 @@ function AudioPlayer({ shape, editor }: { shape: AudioShape; editor: any }) {
       <div className="flex items-center gap-3">
         {/* Play/Pause button */}
         <Button
-          onClick={togglePlay}
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
-          onPointerMove={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            stopEventPropagation(e)
+            togglePlay()
+          }}
+          onPointerDown={stopEventPropagation}
+          onPointerUp={stopEventPropagation}
+          onPointerMove={stopEventPropagation}
           size="icon"
           className="h-10 w-10 shrink-0"
         >
@@ -161,10 +169,13 @@ function AudioPlayer({ shape, editor }: { shape: AudioShape; editor: any }) {
         {/* Volume controls */}
         <div className="flex items-center gap-2 flex-1">
           <Button
-            onClick={toggleMute}
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerUp={(e) => e.stopPropagation()}
-            onPointerMove={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              stopEventPropagation(e)
+              toggleMute()
+            }}
+            onPointerDown={stopEventPropagation}
+            onPointerUp={stopEventPropagation}
+            onPointerMove={stopEventPropagation}
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 shrink-0"
@@ -180,9 +191,10 @@ function AudioPlayer({ shape, editor }: { shape: AudioShape; editor: any }) {
             max={1}
             step={0.01}
             onValueChange={handleVolumeChange}
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerUp={(e) => e.stopPropagation()}
-            onPointerMove={(e) => e.stopPropagation()}
+            onPointerDown={stopEventPropagation}
+            onPointerUp={stopEventPropagation}
+            onPointerMove={stopEventPropagation}
+            onClick={stopEventPropagation}
             className="flex-1 cursor-pointer"
           />
         </div>

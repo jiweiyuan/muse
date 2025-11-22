@@ -1,8 +1,9 @@
 "use client"
 
 import { track, useEditor } from "tldraw"
-import { Download, Trash2, Copy } from "lucide-react"
+import { Download } from "lucide-react"
 import type { AudioShape } from "../shapes/audio-shape"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 /**
  * Audio Context Menu - Floating menu for selected audio shapes
@@ -33,12 +34,19 @@ export const AudioContextMenu = track(() => {
   const shapePageBounds = editor.getShapePageBounds(audioShape)
   if (!shapePageBounds) return null
 
-  const viewportPageBounds = editor.getViewportPageBounds()
-  const zoom = editor.getZoomLevel()
+  // Convert page coordinates to screen coordinates
+  const topLeft = editor.pageToScreen({ x: shapePageBounds.x, y: shapePageBounds.y })
+  const bottomRight = editor.pageToScreen({
+    x: shapePageBounds.x + shapePageBounds.width,
+    y: shapePageBounds.y + shapePageBounds.height
+  })
 
-  // Position menu above the shape
-  const menuX = (shapePageBounds.center.x - viewportPageBounds.x) * zoom
-  const menuY = (shapePageBounds.minY - viewportPageBounds.y) * zoom - 50 // 50px above
+  // Calculate screen-space dimensions
+  const screenWidth = bottomRight.x - topLeft.x
+
+  // Position the menu above the selected audio
+  const menuX = topLeft.x + screenWidth / 2 - 20 // Center horizontally (approximate half menu width)
+  const menuY = topLeft.y - 58 // Position above the audio
 
   const handleDownload = () => {
     if (!audioUrl) return
@@ -52,61 +60,33 @@ export const AudioContextMenu = track(() => {
     document.body.removeChild(link)
   }
 
-  const handleDuplicate = () => {
-    editor.duplicateShapes([audioShape.id])
-  }
-
-  const handleDelete = () => {
-    editor.deleteShapes([audioShape.id])
-  }
-
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: `${menuX}px`,
-        top: `${menuY}px`,
-        transform: "translateX(-50%)",
-        zIndex: 1000,
-        pointerEvents: "auto",
-      }}
-      onClick={(e) => {
-        // Prevent clicks from deselecting the shape
-        e.stopPropagation()
-      }}
-    >
-      <div className="flex items-center gap-1 px-2 py-1.5 bg-white/95 dark:bg-[rgba(30,30,30,0.95)] rounded-lg shadow-[0_0_0_0.5px_rgba(0,0,0,0.08),0_2px_4px_rgba(0,0,0,0.04),0_8px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2),0_8px_16px_rgba(0,0,0,0.3)] backdrop-blur-[16px]">
-        {/* Download button */}
-        <button
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-[#374151] dark:text-[#e5e7eb] bg-transparent hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:bg-black/[0.08] dark:active:bg-white/[0.1] rounded-md transition-colors cursor-pointer border-none outline-none disabled:opacity-50"
-          onClick={handleDownload}
-          title="Download audio"
-          disabled={!audioUrl}
-        >
-          <Download size={14} strokeWidth={2} />
-          <span>Download</span>
-        </button>
-
-        {/* Duplicate button */}
-        <button
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-[#374151] dark:text-[#e5e7eb] bg-transparent hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:bg-black/[0.08] dark:active:bg-white/[0.1] rounded-md transition-colors cursor-pointer border-none outline-none"
-          onClick={handleDuplicate}
-          title="Duplicate audio"
-        >
-          <Copy size={14} strokeWidth={2} />
-          <span>Duplicate</span>
-        </button>
-
-        {/* Delete button */}
-        <button
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-[#ef4444] dark:text-[#f87171] bg-transparent hover:bg-red-50 dark:hover:bg-red-900/20 active:bg-red-100 dark:active:bg-red-900/30 rounded-md transition-colors cursor-pointer border-none outline-none"
-          onClick={handleDelete}
-          title="Delete audio"
-        >
-          <Trash2 size={14} strokeWidth={2} />
-          <span>Delete</span>
-        </button>
+    <TooltipProvider>
+      <div
+        className="fixed z-[1001] box-border rounded-xl bg-white/95 backdrop-blur-2xl shadow-[0_0_0_0.5px_rgba(193,197,204,0.4),0_2px_4px_rgba(0,0,0,0.04),0_8px_16px_rgba(0,0,0,0.08),0_16px_32px_rgba(0,0,0,0.08)] p-1.5 outline outline-[0.5px] outline-[rgba(193,197,204,0.4)] outline-offset-[-0.5px] pointer-events-auto animate-[contextMenuFadeIn_0.15s_ease] dark:bg-[rgba(30,30,30,0.95)] dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.15),0_2px_4px_rgba(0,0,0,0.2),0_8px_16px_rgba(0,0,0,0.3),0_16px_32px_rgba(0,0,0,0.4)] dark:outline-[rgba(255,255,255,0.15)]"
+        style={{
+          left: `${menuX}px`,
+          top: `${menuY}px`,
+        }}
+      >
+        <div className="flex items-center gap-1">
+          {/* Download button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="flex items-center justify-center w-8 h-8 bg-transparent border-none rounded-lg text-[#2f3640] cursor-pointer transition-colors duration-150 outline-none hover:bg-[rgba(47,54,64,0.08)] active:bg-[rgba(47,54,64,0.12)] disabled:opacity-50 disabled:cursor-not-allowed dark:text-[#e5e5e5] dark:hover:bg-[rgba(255,255,255,0.08)] dark:active:bg-[rgba(255,255,255,0.12)]"
+                onClick={handleDownload}
+                disabled={!audioUrl}
+              >
+                <Download size={18} strokeWidth={2} className="text-[#2f3640] dark:text-[#e5e5e5]" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={4}>
+              Download
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   )
 })
