@@ -67,7 +67,7 @@ export function CanvasContainer({
       {/* UI overlays - Only render after canvas is ready */}
       {isReady && (
         <>
-          {/* Chat Panel - Left overlay with 8px padding - Always mounted to preserve state */}
+          {/* Chat Panel - Fixed width on left side - Always mounted to preserve state */}
           <motion.div
             initial={{ x: -500, opacity: 0 }}
             animate={{
@@ -79,8 +79,8 @@ export function CanvasContainer({
             style={{
               top: '8px',
               left: '8px',
-              right: '8px',
               bottom: '8px',
+              width: '480px',
               visibility: chatVisible ? 'visible' : 'hidden',
             }}
           >

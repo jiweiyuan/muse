@@ -323,62 +323,94 @@ CREATE INDEX idx_chats_project_id ON chats(project_id);
 CREATE INDEX idx_messages_chat_id ON messages(chat_id);
 ```
 
-## Development
+## Development Commands
 
-### Code Quality
 ```bash
-# Linting
-pnpm lint
+# Backend
+cd backend
+pnpm dev              # Start dev server with watch
+pnpm build            # Compile TypeScript
+pnpm start            # Run production build
+pnpm lint             # ESLint
+pnpm migrate:create   # Create new migration
+pnpm migrate:up       # Run migrations
+pnpm migrate:down     # Rollback last migration
 
-# Type checking
-pnpm type-check
-
-# Format code
-pnpm format
-```
-
-### Database Migrations
-```bash
-# Create migration
-pnpm migrate:create migration_name
-
-# Run migrations
-pnpm migrate:up
-
-# Rollback
-pnpm migrate:down
+# Frontend
+cd frontend
+pnpm dev              # Start dev server (Turbopack)
+pnpm build            # Production build
+pnpm start            # Serve production build
+pnpm lint             # ESLint + Next.js rules
+pnpm type-check       # TypeScript check
 ```
 
 ## Deployment
 
-### Frontend (Vercel)
+### Vercel (Frontend)
 ```bash
 cd frontend
-pnpm build
+vercel --prod
 ```
 
-### Backend (Docker/Railway/Fly.io)
+### Railway/Fly.io (Backend)
 ```bash
-cd backend
-pnpm build
-pnpm start
+# Dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build
+CMD ["pnpm", "start"]
 ```
 
-## Contributing
+### Environment Setup
+- Set all env vars in hosting platform
+- Run migrations: `pnpm migrate:up`
+- Ensure PostgreSQL + Redis are accessible
 
-This project was built for the London AI Hackathon 2025. Contributions, issues, and feature requests are welcome!
+## Troubleshooting
+
+**Music generation fails**:
+- Check `FAL_KEY` is set
+- Verify fal.ai quota: https://fal.ai/dashboard
+- Check lyrics length (max ~1000 chars for MiniMax v2)
+
+**Canvas sync not working**:
+- Ensure WebSocket connection established
+- Check CORS settings in backend
+- Verify Redis is running (stores sync state)
+
+**Chat streaming issues**:
+- Confirm AI provider API key is valid
+- Check rate limits on provider dashboard
+- Ensure `ai` package version matches across frontend/backend
+
+**Database migration errors**:
+- Verify PostgreSQL connection string
+- Check migration table: `SELECT * FROM schema_migrations;`
+- Force version: `pnpm migrate:force <version>`
+
+## Hackathon Requirements
+
+**Technologies Used** (need 3+):
+- ✅ OpenAI (GPT models)
+- ✅ fal.ai (MiniMax v2 music generation)
+- ✅ Valyu AI (search/RAG)
+- ✅ Anthropic (Claude models)
+- ⚠️ ElevenLabs (voice - planned)
+
+**Submission**:
+- Track: Open Innovation
+- Video: [Loom link]
+- Repo: Public GitHub
+- Demo: [Deployment URL]
 
 ## License
 
 MIT
 
-## Acknowledgments
-
-- **London AI Hackathon 2025** - Event organizers
-- **fal.ai** - Generative music models
-- **valyu.ai** - Search integration
-- **OpenAI** - LLM providers
-
 ---
 
-**Built with 💜 for the London AI Hackathon 2025**
+Built for London AI Hackathon 2025
