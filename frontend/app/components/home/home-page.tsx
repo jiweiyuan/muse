@@ -18,7 +18,7 @@ export function HomePage() {
   const { user } = useUser()
   const { createProject } = useProjects()
   const { setPendingMessage } = usePendingMessageStore()
-  const { setActiveChatId } = useProjectStore()
+  const { setActiveProject } = useProjectStore()
 
   // File upload functionality
   const { files, handleFileUpload, handleFileRemove } = useFileUpload()
@@ -53,8 +53,8 @@ export function HomePage() {
         throw new Error("Failed to create chat")
       }
 
-      // Set the active chat ID in project store BEFORE navigation
-      setActiveChatId(project.chatId)
+      // Set the active project, chat, and canvas in project store BEFORE navigation
+      setActiveProject(project.id, project.chatId, null, project.canvasId)
 
       // Set pending message so it will be sent after navigation
       setPendingMessage(input, files, selectedModel, false)
@@ -74,7 +74,7 @@ export function HomePage() {
     files,
     selectedModel,
     createProject,
-    setActiveChatId,
+    setActiveProject,
     setPendingMessage,
     router,
   ])

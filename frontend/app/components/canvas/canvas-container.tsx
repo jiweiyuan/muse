@@ -5,7 +5,7 @@ import { CanvasProvider } from "./canvas-provider"
 import { useCanvasStore } from "@/lib/canvas-store/provider"
 import { motion } from "framer-motion"
 import { Loader } from "@/components/prompt-kit/loader"
-import { SparkleIcon } from "@/components/icons/sparkle"
+import { MuseIcon } from "@/components/icons/muse"
 import { useLayoutEffect } from "react"
 import { ImageGenerator } from "./image-generator"
 import { VideoGenerator } from "./video-generator"
@@ -97,14 +97,16 @@ export function CanvasContainer({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               onClick={toggleChatVisible}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 absolute z-40 flex items-center justify-center rounded-full size-10 shadow-[0_0_0_0.5px_rgba(0,0,0,0.08),0_2px_4px_rgba(0,0,0,0.04),0_8px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_2px_4px_rgba(0,0,0,0.2),0_8px_16px_rgba(0,0,0,0.3)] transition-colors cursor-pointer"
+              className="absolute z-40 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity rounded-full border-2 border-border bg-background shadow-lg overflow-hidden"
               style={{
                 top: '12px',
                 left: '12px',
+                width: '44px',
+                height: '44px',
               }}
               aria-label="Open chat"
             >
-              <SparkleIcon className="h-5 w-5" />
+              <MuseIcon width={44} height={44} />
             </motion.button>
           )}
 

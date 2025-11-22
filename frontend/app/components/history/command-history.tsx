@@ -326,6 +326,17 @@ export function CommandHistory({
   const { messages, isLoading, error, fetchPreview, clearPreview } =
     useChatPreview()
 
+  // Wrapper function for ChatPreviewPanel that provides projectId
+  const handleFetchPreview = useCallback(
+    async (chatId: string) => {
+      const chat = chatHistory.find((c) => c.id === chatId)
+      if (chat?.projectId) {
+        await fetchPreview(chat.projectId, chatId)
+      }
+    },
+    [chatHistory, fetchPreview]
+  )
+
   if (isOpen && !hasPrefetchedRef.current) {
     const recentChats = chatHistory.slice(0, 10)
     recentChats.forEach((chat) => {
@@ -366,10 +377,13 @@ export function CommandHistory({
 
       // Fetch preview when hovering over a chat
       if (chatId) {
-        fetchPreview(chatId)
+        const chat = chatHistory.find((c) => c.id === chatId)
+        if (chat?.projectId) {
+          fetchPreview(chat.projectId, chatId)
+        }
       }
     },
-    [preferences.showConversationPreviews, fetchPreview]
+    [preferences.showConversationPreviews, fetchPreview, chatHistory]
   )
 
   const handlePreviewHover = useCallback(
@@ -600,7 +614,7 @@ export function CommandHistory({
               messages={messages}
               isLoading={isLoading}
               error={error}
-              onFetchPreview={fetchPreview}
+              onFetchPreview={handleFetchPreview}
             />
           )}
         </div>

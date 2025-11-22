@@ -12,10 +12,9 @@ export function ProjectHeader() {
         {/* Left: Muse Icon */}
         <Link
           href="/"
-          className="pointer-events-auto inline-flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
+          className="pointer-events-auto inline-flex items-center text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
         >
-          <MuseIcon width={20} height={20} />
-          <span className="hidden sm:inline">{APP_NAME}</span>
+          <MuseIcon width={24} height={24} />
         </Link>
 
         {/* Right: Profile Icon */}

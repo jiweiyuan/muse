@@ -401,6 +401,13 @@ export function ConversationChat({ chatTitle, onCollapse, onNavigate }: Conversa
       return
     }
 
+    // Don't reset messages if we've already sent a pending message
+    // This prevents the race condition where messages finish loading AFTER
+    // the pending message is sent, which would wipe out the user's message
+    if (hasSentPendingMessageRef.current) {
+      return
+    }
+
     // Set messages from database when switching to a different chat
     const dedupedMessages = dedupeMessages(initialMessages)
     setMessages(dedupedMessages)
